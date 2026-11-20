@@ -20,10 +20,11 @@ jobs:
 
       - name: Download pinned course kit
         run: |
-          curl -fL "$KIT_URL" -o kit.tar.gz
-          echo "$KIT_SHA256  kit.tar.gz" | sha256sum -c -
+          archive="$RUNNER_TEMP/kit.tar.gz"
+          curl -fL "$KIT_URL" -o "$archive"
+          echo "$KIT_SHA256  $archive" | sha256sum -c -
           mkdir -p .course-kit
-          tar -xzf kit.tar.gz -C .course-kit
+          tar -xzf "$archive" -C .course-kit
           cat .course-kit/v1/VERSION
 
       - name: Validate JSON in evidence
@@ -40,5 +41,5 @@ jobs:
           if [ -f "$dir/report.json" ]; then
             python3 .course-kit/v1/tools/check_practice.py "$PRACTICE" --submission .
           else
-            echo "No $dir/report.json yet (commit A) — skipping checker"
+            echo "No $dir/report.json yet (implementation commit) — skipping checker"
           fi

@@ -40,3 +40,43 @@ CI скачивает зафиксированную ревизию и пров�
 
     python3 -m json.tool evidence/pr01/environment.json > /dev/null
     python3 .course-kit/v1/tools/check_practice.py PR01 --submission .
+
+## PR02: пакет turtle_bringup и launch-файл
+
+Пакет `src/turtle_bringup` (ament_python) устанавливает `launch/sim.launch.py`, который запускает `turtlesim_node`.
+Корень репозитория — корень workspace.
+
+Сборка (терминал контейнера, корень репозитория):
+
+    source /opt/ros/lyrical/setup.bash
+    set -o pipefail
+    colcon build --symlink-install --packages-select turtle_bringup \
+      2>&1 | tee evidence/pr02/build.txt
+
+Запуск (новый терминал):
+
+    source /opt/ros/lyrical/setup.bash
+    source install/setup.bash
+    export ROS_DOMAIN_ID=16
+    ros2 launch turtle_bringup sim.launch.py
+
+Команда движения (другой терминал, тот же домен):
+
+    ros2 topic pub --once /turtle1/cmd_vel geometry_msgs/msg/Twist \
+      '{linear: {x: 1.0}, angular: {z: 0.5}}'
+
+Сбой для опыта: та же команда в `/cmd_vel` — издатель виден, подписчика нет:
+
+    ros2 topic pub --rate 1 --wait-matching-subscriptions 0 /cmd_vel geometry_msgs/msg/Twist \
+      '{linear: {x: 1.0}, angular: {z: 0.5}}'
+    ros2 topic info /cmd_vel --verbose
+    ros2 topic info /turtle1/cmd_vel --verbose
+
+CI (`ros-build`) в контейнере `ros:lyrical-ros-base` собирает пакет, проверяет, что `sim.launch.py`
+установлен в `install/turtle_bringup/share/turtle_bringup/launch`, разбирает его через
+`ros2 launch ... --show-args` (без GUI) и запускает `colcon test`.
+
+Результаты лежат в `evidence/pr02/`. Проверка:
+
+    python3 -m py_compile src/turtle_bringup/launch/sim.launch.py
+    python3 .course-kit/v1/tools/check_practice.py PR02 --submission .

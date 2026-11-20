@@ -2,7 +2,7 @@ name: CI
 on: [push, pull_request]
 
 env:
-  PRACTICE: PR01
+  PRACTICE: PR02
   KIT_URL: https://ros.lms.ci.nsu.ru/downloads/robotics-course-kit-v1-w11-0b67bfd41448.tar.gz
   KIT_SHA256: 0b67bfd41448549d21122124b7f49211ba2cd068cc56751871f319eadeb9d0ab
 
@@ -43,3 +43,56 @@ jobs:
           else
             echo "No $dir/report.json yet (implementation commit) — skipping checker"
           fi
+
+  ros-build:
+    runs-on: ubuntu-latest
+    container: ros:lyrical-ros-base
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ros-lyrical-turtlesim \
+            ros-lyrical-ament-copyright \
+            ros-lyrical-ament-flake8 \
+            ros-lyrical-ament-pep257 \
+            ros-lyrical-ament-mypy \
+            ros-lyrical-ament-xmllint \
+            python3-pytest
+
+      - name: Syntax check of launch file
+        run: python3 -m py_compile src/turtle_bringup/launch/sim.launch.py
+
+      - name: Build turtle_bringup
+        run: |
+          source /opt/ros/lyrical/setup.bash
+          set -o pipefail
+          colcon build --symlink-install --packages-select turtle_bringup \
+            2>&1 | tee "$RUNNER_TEMP/build.txt"
+
+      - name: Check installed sim.launch.py
+        run: |
+          source /opt/ros/lyrical/setup.bash
+          source install/setup.bash
+          prefix="$(ros2 pkg prefix turtle_bringup)"
+          echo "prefix: $prefix"
+          case "$prefix" in
+            "$PWD"/install/*) ;;
+            *) echo "turtle_bringup найден не в install этого workspace"; exit 1 ;;
+          esac
+          launch_file="$prefix/share/turtle_bringup/launch/sim.launch.py"
+          ls -l "$launch_file"
+          test -f "$launch_file"
+          # Разбирает launch-описание без запуска нод: GUI в CI не нужен
+          ros2 launch turtle_bringup sim.launch.py --show-args
+
+      - name: Package tests
+        run: |
+          source /opt/ros/lyrical/setup.bash
+          colcon test --packages-select turtle_bringup
+          colcon test-result --verbose

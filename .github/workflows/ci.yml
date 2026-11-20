@@ -1,0 +1,44 @@
+name: CI
+on: [push, pull_request]
+
+env:
+  PRACTICE: PR01
+  KIT_URL: https://ros.lms.ci.nsu.ru/downloads/robotics-course-kit-v1-w11-0b67bfd41448.tar.gz
+  KIT_SHA256: 0b67bfd41448549d21122124b7f49211ba2cd068cc56751871f319eadeb9d0ab
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download pinned course kit
+        run: |
+          curl -fL "$KIT_URL" -o kit.tar.gz
+          echo "$KIT_SHA256  kit.tar.gz" | sha256sum -c -
+          mkdir -p .course-kit
+          tar -xzf kit.tar.gz -C .course-kit
+          cat .course-kit/v1/VERSION
+
+      - name: Validate JSON in evidence
+        run: |
+          shopt -s globstar nullglob
+          for f in evidence/**/*.json; do
+            echo "json: $f"
+            python3 -m json.tool "$f" > /dev/null
+          done
+
+      - name: Course checker
+        run: |
+          dir="evidence/${PRACTICE,,}"
+          if [ -f "$dir/report.json" ]; then
+            python3 .course-kit/v1/tools/check_practice.py "$PRACTICE" --submission .
+          else
+            echo "No $dir/report.json yet (commit A) — skipping checker"
+          fi

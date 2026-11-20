@@ -1,0 +1,2 @@
+broken (domain 17): exit=124
+fixed (domain 16): exit=0

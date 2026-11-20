@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "practice_id": "PR01",
+  "commit": "7c8ebdf3a324693f786b59fa0ff02b44d0143f93",
+  "course_kit": {
+    "version": "v1-w11",
+    "archive_sha256": "0b67bfd41448549d21122124b7f49211ba2cd068cc56751871f319eadeb9d0ab"
+  },
+  "commands": [
+    "ros2 doctor --report > evidence/pr01/doctor.txt 2>&1",
+    "bash .course-kit/v1/tools/workstation_report.sh > evidence/pr01/workstation.txt",
+    "ros2 run turtlesim turtlesim_node  # ROS_DOMAIN_ID=16",
+    "ros2 run turtlesim turtle_teleop_key  # ROS_DOMAIN_ID=16, затем 17, затем снова 16",
+    "ros2 node list --no-daemon --spin-time 2",
+    "ros2 topic list -t",
+    "ros2 node info /turtlesim",
+    "ros2 topic type /turtle1/pose",
+    "ros2 topic echo /turtle1/pose --once",
+    "ros2 topic hz /turtle1/pose",
+    "timeout -s INT -k 3s 5s ros2 topic echo /turtle1/pose turtlesim_msgs/msg/Pose --once > evidence/pr01/pose-broken.txt  # ROS_DOMAIN_ID=17",
+    "timeout -s INT -k 3s 5s ros2 topic echo /turtle1/pose turtlesim_msgs/msg/Pose --once > evidence/pr01/pose-fixed.txt  # ROS_DOMAIN_ID=16",
+    "python3 -m json.tool evidence/pr01/environment.json"
+  ],
+  "tests": [
+    {
+      "name": "graph: ноды /turtlesim и /teleop_turtle видны в домене 16",
+      "status": "passed"
+    },
+    {
+      "name": "graph: топики и типы /turtle1/pose (turtlesim_msgs/msg/Pose) и /turtle1/cmd_vel (geometry_msgs/msg/Twist)",
+      "status": "passed"
+    },
+    {
+      "name": "rate: /turtle1/pose ≈ 62,5 Гц, замер ≈ 78 с",
+      "status": "passed"
+    },
+    {
+      "name": "link broken: CLI в домене 17 не получает позу за 5 с, exit=124",
+      "status": "passed"
+    },
+    {
+      "name": "link restored: CLI в домене 16 получает позу, exit=0",
+      "status": "passed"
+    },
+    {
+      "name": "environment.json проходит json.tool",
+      "status": "passed"
+    }
+  ],
+  "defect": {
+    "reproducer": "turtlesim в ROS_DOMAIN_ID=16; teleop и CLI перезапущены в ROS_DOMAIN_ID=17. ros2 node list показывает только /teleop_turtle, стрелки не управляют черепахой; timeout -s INT -k 3s 5s ros2 topic echo /turtle1/pose turtlesim_msgs/msg/Pose --once не получает сообщений, exit=124, pose-broken.txt пустой.",
+    "root_cause": "ROS_DOMAIN_ID задаёт домен DDS discovery: участники разных доменов не обнаруживают друг друга, поэтому teleop и подписчик в домене 17 не видят /turtlesim из домена 16. Значение читается при запуске процесса, export не меняет уже работающую ноду, поэтому teleop нужно перезапустить.",
+    "proof_after": "teleop и CLI перезапущены в ROS_DOMAIN_ID=16, симулятор и установка ROS не менялись. ros2 node list показывает /teleop_turtle и /turtlesim, стрелки двигают черепаху; та же команда timeout ... --once получает позу (pose-fixed.txt), exit=0."
+  },
+  "claims": {
+    "public_tests_passed": true,
+    "defect_reproduced": true,
+    "defect_fixed": true
+  },
+  "time": {
+    "contact_academic_hours": 2,
+    "self_study_hours": 2
+  },
+  "ai_used": true
+}

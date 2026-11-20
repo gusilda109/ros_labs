@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "practice_id": "PR02",
+  "commit": "24c402ed065bd5a52e6ff5e20ebb6aa523a5a1db",
+  "course_kit": {
+    "version": "v1-w11",
+    "archive_sha256": "0b67bfd41448549d21122124b7f49211ba2cd068cc56751871f319eadeb9d0ab"
+  },
+  "commands": [
+    "source /opt/ros/lyrical/setup.bash",
+    "export ROS_DOMAIN_ID=16",
+    "cd \"$(git rev-parse --show-toplevel)\" && pwd",
+    "printenv ROS_DISTRO ROS_DOMAIN_ID",
+    "ros2 pkg prefix turtlesim",
+    "ros2 pkg create --build-type ament_python --license Apache-2.0 turtle_bringup --dependencies launch launch_ros turtlesim",
+    "set -o pipefail; colcon build --symlink-install --packages-select turtle_bringup 2>&1 | tee evidence/pr02/build-empty.txt",
+    "set -o pipefail; colcon build --symlink-install --packages-select turtle_bringup 2>&1 | tee evidence/pr02/build.txt",
+    "source install/setup.bash && ros2 pkg prefix turtle_bringup",
+    "ls \"$(ros2 pkg prefix turtle_bringup)/share/turtle_bringup/launch\"",
+    "ros2 launch turtle_bringup sim.launch.py",
+    "ros2 node list --no-daemon --spin-time 2",
+    "ros2 interface show geometry_msgs/msg/Twist",
+    "ros2 topic type /turtle1/pose",
+    "ros2 topic echo /turtle1/pose --once",
+    "ros2 topic pub --once /turtle1/cmd_vel geometry_msgs/msg/Twist '{linear: {x: 1.0}, angular: {z: 0.5}}'",
+    "ros2 topic pub --rate 1 --wait-matching-subscriptions 0 /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 1.0}, angular: {z: 0.5}}'",
+    "ros2 topic info /cmd_vel --verbose",
+    "ros2 topic info /turtle1/cmd_vel --verbose",
+    "ros2 topic pub --rate 1 --wait-matching-subscriptions 0 /turtle1/cmd_vel geometry_msgs/msg/Twist '{linear: {x: 1.0}, angular: {z: 0.5}}'",
+    "python3 -m py_compile src/turtle_bringup/launch/sim.launch.py",
+    "python3 .course-kit/v1/tools/check_practice.py PR02 --submission ."
+  ],
+  "tests": [
+    {
+      "name": "build: пустой пакет turtle_bringup собирается colcon (build-empty.txt)",
+      "status": "passed"
+    },
+    {
+      "name": "build: пакет с sim.launch.py собирается colcon (build.txt)",
+      "status": "passed"
+    },
+    {
+      "name": "discovery: ros2 pkg prefix turtle_bringup указывает в install этого workspace, sim.launch.py установлен в share/turtle_bringup/launch",
+      "status": "passed"
+    },
+    {
+      "name": "launch: ros2 launch turtle_bringup sim.launch.py открывает одно окно, /turtlesim виден в node list",
+      "status": "passed"
+    },
+    {
+      "name": "launch stop: Ctrl+C завершает launch и запущенный им turtlesim, node list пуст",
+      "status": "passed"
+    },
+    {
+      "name": "delivery: ros2 topic pub --once в /turtle1/cmd_vel меняет позу черепахи",
+      "status": "passed"
+    },
+    {
+      "name": "broken name: издатель в /cmd_vel виден, подписчиков 0, черепаха стоит",
+      "status": "passed"
+    },
+    {
+      "name": "fixed name: издатель в /turtle1/cmd_vel, подписчик /turtlesim, черепаха движется",
+      "status": "passed"
+    },
+    {
+      "name": "py_compile sim.launch.py",
+      "status": "passed"
+    }
+  ],
+  "defect": {
+    "reproducer": "turtlesim запущен через ros2 launch turtle_bringup sim.launch.py, ROS_DOMAIN_ID=16. В другом терминале: ros2 topic pub --rate 1 --wait-matching-subscriptions 0 /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 1.0}, angular: {z: 0.5}}'. Черепаха не двигается; ros2 topic info /cmd_vel --verbose: Publisher count 1, Subscription count 0; ros2 topic info /turtle1/cmd_vel --verbose: Publisher count 0, Subscription count 1 (/turtlesim).",
+    "root_cause": "Издатель и подписчик связываются по полному имени топика, тип и QoS проверяются уже для совпавших имён. turtlesim подписан на /turtle1/cmd_vel, а команда шла в /cmd_vel: это другой топик с тем же типом Twist. Обнаружение работало (издатель и его тип видны в графе), но подписчика в /cmd_vel не было, поэтому сообщения никому не доставлялись.",
+    "proof_after": "Изменено только имя топика /cmd_vel → /turtle1/cmd_vel, тип, скорость и домен те же. ros2 topic info /turtle1/cmd_vel --verbose показывает издателя и подписчика /turtlesim, черепаха движется по дуге; после Ctrl+C издателя останавливается примерно через 1 с."
+  },
+  "claims": {
+    "public_tests_passed": true,
+    "defect_reproduced": true,
+    "defect_fixed": true
+  },
+  "time": {
+    "contact_academic_hours": 2,
+    "self_study_hours": 2
+  },
+  "ai_used": true
+}

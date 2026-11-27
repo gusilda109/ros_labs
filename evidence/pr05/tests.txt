@@ -1,0 +1,40 @@
++ source /opt/ros/lyrical/setup.bash
++ colcon build --symlink-install
+Starting >>> patrol
+Starting >>> turtle_bringup
+Finished <<< patrol [0.73s]
+Starting >>> course_bringup
+Finished <<< turtle_bringup [0.74s]
+Finished <<< course_bringup [0.61s]
+
+Summary: 3 packages finished [1.41s]
++ source install/setup.bash
++ ros2 launch course_bringup patrol.launch.py --show-args
+Arguments (pass arguments as '<name>:=<value>'):
+
+    'namespace':
+        Namespace for the patrol system
+        (default: 'robot_a')
+
+    'record':
+        Start the MCAP recorder. Valid choices are: ['true', 'false']
+        (default: 'false')
+
+    'bag_dir':
+        New bag output directory
+        (default: 'pr05_bag')
+
+    'subscriber_reliability':
+        Reliability requested by the sensor subscriber. Valid choices are: ['reliable', 'best_effort']
+        (default: 'best_effort')
++ colcon test
+Starting >>> patrol
+Starting >>> turtle_bringup
+Finished <<< turtle_bringup [7.39s]
+Finished <<< patrol [7.68s]
+Starting >>> course_bringup
+Finished <<< course_bringup [0.65s]
+
+Summary: 3 packages finished [8.41s]
++ colcon test-result --verbose
+Summary: 29 tests, 0 errors, 0 failures, 2 skipped

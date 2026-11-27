@@ -1,0 +1,172 @@
+PR06 — модель Ackermann и проверка дефекта
+Ubuntu в контейнере ros2, рабочий каталог /home/ubuntu/ros2_ws
+$ source /opt/ros/lyrical/setup.bash
+$ colcon build --symlink-install --packages-select course_description
+$ source install/setup.bash
+$ export ROS_DOMAIN_ID=66
+
+Модель с одним лидаром: check_urdf распознал корень base_link с единственным
+потомком lidar_link. Первый запуск robot_state_publisher опубликовал
+base_link → lidar_link с XYZ (0.28, 0, 0.38) м.
+
+## 353f565 — исходная модель
+Терминал A: ros2 launch course_description vehicle.launch.py
+Терминал C: /joint_states с шестью нулевыми углами, 10 Гц (команда в README).
+Терминал B:
+$ xacro src/course_description/urdf/vehicle.urdf.xacro > /tmp/vehicle.urdf
+$ check_urdf /tmp/vehicle.urdf
+robot name is: course_ackermann
+---------- Successfully Parsed XML ---------------
+root Link: base_link has 7 child(ren)
+    child(1):  camera_link
+        child(1):  camera_optical_frame
+    child(2):  front_left_knuckle
+        child(1):  front_left_wheel
+    child(3):  front_right_knuckle
+        child(1):  front_right_wheel
+    child(4):  imu_link
+    child(5):  lidar_link
+    child(6):  rear_left_wheel
+    child(7):  rear_right_wheel
+exit=0
+
+$ python3 -m pytest -q src/course_description/test/test_vehicle.py::test_lidar_parent
+.                                                                        [100%]
+1 passed in 0.02s
+exit=0
+
+$ colcon test --packages-select course_description
+Starting >>> course_description
+Finished <<< course_description [0.26s]
+
+Summary: 1 package finished [0.33s]
+$ colcon test-result --test-result-base build/course_description --verbose
+Summary: 7 tests, 0 errors, 0 failures, 0 skipped
+
+$ timeout -k 2s -s INT 5s ros2 run tf2_ros tf2_echo base_link lidar_link
+At time 0.0
+- Translation: [0.280, 0.000, 0.380]
+- Rotation: in Quaternion (xyzw) [0.000, 0.000, 0.000, 1.000]
+exit=124 (команда остановлена после измерения)
+
+$ (cd "$(mktemp -d)" && ros2 run tf2_tools view_frames)
+Пары из вывода view_frames (ребро родитель → потомок):
+  base_link → front_left_knuckle
+  front_left_knuckle → front_left_wheel
+  base_link → front_right_knuckle
+  front_right_knuckle → front_right_wheel
+  base_link → rear_left_wheel
+  base_link → rear_right_wheel
+  base_link → camera_link
+  camera_link → camera_optical_frame
+  base_link → imu_link
+  base_link → lidar_link
+
+RViz: Global Status: Ok, Fixed Frame: base_link. Снимок — rviz.png.
+KDL предупреждает об инерции корневого звена. В URDF инерция корпуса
+задана, robot_state_publisher и RViz успешно запустились.
+
+Ctrl+C: процессы этого запуска завершились штатно.
+
+## 0c799e5 — дефектная ветка codex/pr06-reproduce-lidar
+Терминал A: ros2 launch course_description vehicle.launch.py rviz:=false
+Терминал B:
+$ xacro src/course_description/urdf/vehicle.urdf.xacro > /tmp/vehicle.urdf
+$ check_urdf /tmp/vehicle.urdf
+robot name is: course_ackermann
+---------- Successfully Parsed XML ---------------
+root Link: base_link has 6 child(ren)
+    child(1):  camera_link
+        child(1):  camera_optical_frame
+        child(2):  lidar_link
+    child(2):  front_left_knuckle
+        child(1):  front_left_wheel
+    child(3):  front_right_knuckle
+        child(1):  front_right_wheel
+    child(4):  imu_link
+    child(5):  rear_left_wheel
+    child(6):  rear_right_wheel
+exit=0
+
+$ python3 -m pytest -q src/course_description/test/test_vehicle.py::test_lidar_parent
+F                                                                        [100%]
+=================================== FAILURES ===================================
+______________________________ test_lidar_parent _______________________________
+
+    def test_lidar_parent():
+        """Keep the lidar offset relative to the base."""
+        joint = expand().find("joint[@name='lidar_joint']")
+>       assert joint.find('parent').attrib['link'] == 'base_link'
+E       AssertionError: assert 'camera_link' == 'base_link'
+E
+E         - base_link
+E         + camera_link
+
+src/course_description/test/test_vehicle.py:35: AssertionError
+=========================== short test summary info ============================
+FAILED src/course_description/test/test_vehicle.py::test_lidar_parent - Asser...
+1 failed in 0.02s
+exit=1
+
+$ timeout -k 2s -s INT 5s ros2 run tf2_ros tf2_echo base_link lidar_link
+At time 0.0
+- Translation: [0.560, 0.000, 0.760]
+- Rotation: in Quaternion (xyzw) [0.000, 0.000, 0.000, 1.000]
+exit=124 (команда остановлена после измерения)
+
+$ (cd "$(mktemp -d)" && ros2 run tf2_tools view_frames)
+Пары из вывода view_frames (ребро родитель → потомок):
+  base_link → camera_link
+  camera_link → camera_optical_frame
+  base_link → imu_link
+  camera_link → lidar_link
+
+Ctrl+C: процессы этого запуска завершились штатно.
+
+## 92f902b — восстановлена связь base_link → lidar_link
+Терминал A: ros2 launch course_description vehicle.launch.py rviz:=false
+Терминал B:
+$ xacro src/course_description/urdf/vehicle.urdf.xacro > /tmp/vehicle.urdf
+$ check_urdf /tmp/vehicle.urdf
+robot name is: course_ackermann
+---------- Successfully Parsed XML ---------------
+root Link: base_link has 7 child(ren)
+    child(1):  camera_link
+        child(1):  camera_optical_frame
+    child(2):  front_left_knuckle
+        child(1):  front_left_wheel
+    child(3):  front_right_knuckle
+        child(1):  front_right_wheel
+    child(4):  imu_link
+    child(5):  lidar_link
+    child(6):  rear_left_wheel
+    child(7):  rear_right_wheel
+exit=0
+
+$ python3 -m pytest -q src/course_description/test/test_vehicle.py::test_lidar_parent
+.                                                                        [100%]
+1 passed in 0.01s
+exit=0
+
+$ colcon test --packages-select course_description
+Starting >>> course_description
+Finished <<< course_description [0.26s]
+
+Summary: 1 package finished [0.33s]
+$ colcon test-result --test-result-base build/course_description --verbose
+Summary: 7 tests, 0 errors, 0 failures, 0 skipped
+
+$ timeout -k 2s -s INT 5s ros2 run tf2_ros tf2_echo base_link lidar_link
+At time 0.0
+- Translation: [0.280, 0.000, 0.380]
+- Rotation: in Quaternion (xyzw) [0.000, 0.000, 0.000, 1.000]
+exit=124 (команда остановлена после измерения)
+
+$ (cd "$(mktemp -d)" && ros2 run tf2_tools view_frames)
+Пары из вывода view_frames (ребро родитель → потомок):
+  base_link → camera_link
+  camera_link → camera_optical_frame
+  base_link → imu_link
+  base_link → lidar_link
+
+Ctrl+C: процессы этого запуска завершились штатно.

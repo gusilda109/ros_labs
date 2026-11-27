@@ -48,7 +48,10 @@ def test_frame_tree():
         expected[f'rear_{side}_wheel'] = ('base_link', 'continuous')
     joints = robot.findall('joint')
     edges = {
-        joint.find('child').attrib['link']: (joint.find('parent').attrib['link'], joint.attrib['type'])
+        joint.find('child').attrib['link']: (
+            joint.find('parent').attrib['link'],
+            joint.attrib['type'],
+        )
         for joint in joints
     }
     links = robot.findall('link')

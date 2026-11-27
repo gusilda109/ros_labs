@@ -134,3 +134,139 @@ python3 .course-kit/v1/tools/check_practice.py PR04 --submission .
 После отклонения нуля параметр и поток остаются на 5 Гц. Команда `timeout`
 завершает каждый замер через 6 секунд. Результаты обоих запусков сохранены
 в [evidence/pr04/parameters.md](evidence/pr04/parameters.md).
+
+## PR05. Общий запуск, QoS и MCAP
+
+В терминале macOS запустите контейнер командой `docker start ros2`.
+На macOS откройте [рабочий стол Ubuntu](http://localhost:6080/). В обоих
+терминалах Ubuntu для опыта выбран домен 57.
+
+**Терминал Ubuntu A — сборка и живой запуск**
+
+```bash
+cd /home/ubuntu/ros2_ws
+source /opt/ros/lyrical/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+export ROS_DOMAIN_ID=57
+ros2 launch course_bringup patrol.launch.py \
+  namespace:=robot_a subscriber_reliability:=reliable record:=false
+```
+
+**Терминал Ubuntu B — проверка несовместимости**
+
+```bash
+cd /home/ubuntu/ros2_ws
+source /opt/ros/lyrical/setup.bash
+source install/setup.bash
+export ROS_DOMAIN_ID=57
+ros2 node list
+ros2 topic info /turtle1/cmd_vel --verbose
+ros2 topic info /robot_a/sensor_pose --verbose
+timeout -k 2s -s INT 3s ros2 topic echo /robot_a/sensor_pose --qos-reliability reliable --once
+echo "$?"
+```
+
+Код `124` означает тайм-аут. Если ROS CLI не завершится в течение двух
+секунд после SIGINT, `timeout` принудительно остановит его с кодом `137`. В терминале A нажмите Ctrl+C и запустите систему
+с `best_effort`. Для нового опыта используйте новый путь записи.
+
+**Терминал Ubuntu A — совместимый подписчик и запись**
+
+```bash
+ros2 launch course_bringup patrol.launch.py \
+  namespace:=robot_a subscriber_reliability:=best_effort record:=true \
+  bag_dir:=log/pr05-bag
+```
+
+**Терминал Ubuntu B — проверка живого потока**
+
+```bash
+timeout -k 2s -s INT 3s ros2 topic echo /robot_a/sensor_pose --qos-reliability best_effort --once
+echo "$?"
+```
+
+Код `0` означает получение сообщения. Дайте записи поработать ещё минимум
+10 секунд, затем нажмите Ctrl+C в A и дождитесь завершения всех процессов.
+
+**Терминал Ubuntu A — воспроизведение записанного потока**
+
+```bash
+ros2 bag play log/pr05-bag --qos-profile-overrides-path config/qos-overrides.yaml
+```
+
+**Терминал Ubuntu B — проверка обоих профилей на воспроизведении**
+
+```bash
+timeout -k 2s -s INT 3s ros2 topic echo /robot_a/sensor_pose --qos-reliability reliable --once
+echo "$?"
+timeout -k 2s -s INT 3s ros2 topic echo /robot_a/sensor_pose --qos-reliability best_effort --once
+echo "$?"
+ros2 bag info log/pr05-bag
+```
+
+Ожидаемые коды при воспроизведении — `124` и `0`. Готовый MCAP и
+вывод проверок лежат в [evidence/pr05](evidence/pr05).
+
+## PR06. Модель Ackermann и статические преобразования
+
+В пакете `course_description` параметры `wheelbase`, `track_width` и `wheel_radius`
+задают колёсную базу, колею и радиус колеса в метрах. Значения по умолчанию
+взяты из `models/course_ackermann/model.sdf` в course kit.
+
+**Браузер на macOS.** Откройте [рабочий стол Ubuntu](http://localhost:6080/).
+
+**Терминал Ubuntu A — сборка и RViz**
+
+```bash
+cd /home/ubuntu/ros2_ws
+source /opt/ros/lyrical/setup.bash
+colcon build --symlink-install --packages-select course_description
+source install/setup.bash
+export ROS_DOMAIN_ID=66
+ros2 launch course_description vehicle.launch.py
+```
+
+В RViz уже выбран Fixed Frame `base_link`. Корпус и фиксированные фреймы
+доступны сразу. Для отображения колёс нужен поток `/joint_states`.
+Для запуска без RViz добавьте `rviz:=false`.
+
+**Терминал Ubuntu B — модель, тесты и TF**
+
+```bash
+cd /home/ubuntu/ros2_ws
+source /opt/ros/lyrical/setup.bash
+source install/setup.bash
+export ROS_DOMAIN_ID=66
+xacro src/course_description/urdf/vehicle.urdf.xacro > /tmp/vehicle.urdf
+check_urdf /tmp/vehicle.urdf
+colcon test --packages-select course_description
+colcon test-result --test-result-base build/course_description --verbose
+timeout -k 2s -s INT 5s ros2 run tf2_ros tf2_echo base_link lidar_link
+(cd /tmp && ros2 run tf2_tools view_frames)
+ros2 topic info /tf_static --verbose --no-daemon --spin-time 2
+timeout -k 2s -s INT 4s ros2 topic echo /tf_static --once --qos-durability transient_local --qos-reliability reliable
+timeout -k 2s -s INT 4s ros2 topic echo /tf_static --once --qos-durability volatile --qos-reliability reliable
+```
+
+`tf2_echo` работает непрерывно, поэтому команда с `timeout` останавливает его
+после нескольких измерений. В опыте с `/tf_static` поздний подписчик
+`transient_local` получает сохранённое сообщение и завершается с кодом 0.
+Подписчик `volatile` в тех же условиях завершается по тайм-ауту с кодом 124.
+
+**Терминал Ubuntu C — положения колёс для RViz и полного дерева TF**
+
+```bash
+cd /home/ubuntu/ros2_ws
+source /opt/ros/lyrical/setup.bash
+source install/setup.bash
+export ROS_DOMAIN_ID=66
+ros2 topic pub -r 10 /joint_states sensor_msgs/msg/JointState \
+  '{header: auto, name: [front_left_steering_joint, front_right_steering_joint, front_left_wheel_joint, front_right_wheel_joint, rear_left_wheel_joint, rear_right_wheel_joint], position: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]}'
+```
+
+Оставьте этот терминал работающим, пока повторяете `view_frames` в терминале B.
+
+[Контракт фреймов](evidence/pr06/frames.md) ·
+[Проверки модели и дефекта](evidence/pr06/model-check.txt) ·
+[Опыт с QoS](evidence/pr06/tf-qos.txt)

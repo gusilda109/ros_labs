@@ -1,0 +1,179 @@
+Терминал Ubuntu A — запуск или воспроизведение
+Терминал Ubuntu B — диагностика в том же домене
+Рабочая директория /home/ubuntu/ros2_ws
+source /opt/ros/lyrical/setup.bash
+source install/setup.bash
+export ROS_DOMAIN_ID=57
+
+=== Живой поток с best_effort-подписчиком и MCAP-записью ===
+$ ros2 launch course_bringup patrol.launch.py namespace:=robot_a subscriber_reliability:=best_effort record:=true bag_dir:=evidence/pr05/bag
+$ ros2 topic info /robot_a/sensor_pose --verbose --no-daemon --spin-time 2
+Type: turtlesim_msgs/msg/Pose
+
+Publisher count: 1
+
+Node name: pose_relay
+Node namespace: /robot_a
+Topic type: turtlesim_msgs/msg/Pose
+Topic type hash: RIHS01_37b07ace09a0ed2c5b774b1410dec972dfd1d292de5656ebc2b075ac646e09c8
+Endpoint type: PUBLISHER
+GID: 01.0f.eb.7d.f8.22.01.4f.00.00.00.00.00.00.13.03
+QoS profile:
+  Reliability: BEST_EFFORT
+  History (Depth): KEEP_LAST (10)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 2
+
+Node name: pose_subscriber
+Node namespace: /robot_a
+Topic type: turtlesim_msgs/msg/Pose
+Topic type hash: RIHS01_37b07ace09a0ed2c5b774b1410dec972dfd1d292de5656ebc2b075ac646e09c8
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.eb.7d.f9.22.9d.ba.00.00.00.00.00.00.13.04
+QoS profile:
+  Reliability: BEST_EFFORT
+  History (Depth): KEEP_LAST (10)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: rosbag2_recorder
+Node namespace: /
+Topic type: turtlesim_msgs/msg/Pose
+Topic type hash: RIHS01_37b07ace09a0ed2c5b774b1410dec972dfd1d292de5656ebc2b075ac646e09c8
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.eb.7d.fa.22.3c.0c.00.00.00.00.00.00.26.04
+QoS profile:
+  Reliability: BEST_EFFORT
+  History (Depth): KEEP_LAST (10)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+$ timeout -k 2s -s INT 3s ros2 topic echo /robot_a/sensor_pose turtlesim_msgs/msg/Pose --qos-reliability best_effort --once
+x: 6.921630382537842
+y: 6.278311729431152
+theta: 0.974399983882904
+linear_velocity: 0.5
+angular_velocity: 0.30000001192092896
+---
+exit=0
+[INFO] [launch]: All log files can be found below /home/ubuntu/.ros/log/2026-11-27-03-40-09-971128-e1ac9704e8b4-8933
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: Sensor topic: /robot_a/sensor_pose; subscriber: best_effort
+[INFO] [launch.user]: Recording MCAP to evidence/pr05/bag
+[INFO] [turtlesim_node-1]: process started with pid [8950]
+[INFO] [patrol-2]: process started with pid [8951]
+[INFO] [pose_relay-3]: process started with pid [8952]
+[INFO] [pose_subscriber-4]: process started with pid [8953]
+[INFO] [record_sensor_pose-5]: process started with pid [8954]
+[turtlesim_node-1] [INFO] [1795750810.031277544] [turtlesim]: Starting turtlesim with node name /turtlesim
+[turtlesim_node-1] [INFO] [1795750810.033187127] [turtlesim]: Spawning turtle [turtle1] at x=[5.544445], y=[5.544445], theta=[0.000000]
+[record_sensor_pose-5] stdin is not a terminal device. Keyboard handling disabled.[INFO] [1795750810.674911961] [rosbag2_recorder]: Event publisher thread: Started
+[record_sensor_pose-5] [INFO] [1795750810.675561378] [rosbag2_recorder]: Press SPACE for pausing/resuming
+[record_sensor_pose-5] [INFO] [1795750810.682034878] [rosbag2_recorder]: Starting recording to 'evidence/pr05/bag'
+[record_sensor_pose-5] [WARN] [1795750810.682084211] [rosbag2_recorder]: No input serialization format specified, using default rmw serialization format: 'cdr'.
+[record_sensor_pose-5] [INFO] [1795750810.685094836] [rosbag2_recorder]: Listening for topics...
+[record_sensor_pose-5] [INFO] [1795750810.685132961] [rosbag2_recorder]: Recording...
+[record_sensor_pose-5] [INFO] [1795750810.685148253] [rosbag2_recorder]: Topics discovery started.
+[pose_subscriber-4] [INFO] [1795750810.696596878] [robot_a.pose_subscriber]: Waiting for /robot_a/sensor_pose (best_effort)
+[pose_subscriber-4] [INFO] [1795750810.703710294] [robot_a.pose_subscriber]: Received pose: x=5.544, y=5.544, theta=0.000
+[record_sensor_pose-5] [INFO] [1795750810.777894836] [rosbag2_recorder]: Subscribed to topic '/robot_a/sensor_pose'
+[record_sensor_pose-5] [INFO] [1795750810.777941586] [rosbag2_recorder]: All requested topics are subscribed. Stopping discovery...
+[record_sensor_pose-5] [INFO] [1795750810.777946503] [rosbag2_recorder]: Topics discovery stopped.
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[INFO] [record_sensor_pose-5]: sending signal 'SIGINT' to process[record_sensor_pose-5]
+[INFO] [pose_subscriber-4]: sending signal 'SIGINT' to process[pose_subscriber-4]
+[INFO] [pose_relay-3]: sending signal 'SIGINT' to process[pose_relay-3]
+[INFO] [patrol-2]: sending signal 'SIGINT' to process[patrol-2]
+[INFO] [turtlesim_node-1]: sending signal 'SIGINT' to process[turtlesim_node-1]
+[record_sensor_pose-5] [INFO] [1795750826.296497718] [rosbag2_cpp]: Writing remaining messages from cache to the bag. It may take a while
+[turtlesim_node-1] [INFO] [1795750826.298249093] [rclcpp]: signal_handler(signum=2)
+[record_sensor_pose-5] [INFO] [1795750826.300559468] [rosbag2_recorder]: Recording stopped
+[record_sensor_pose-5] [INFO] [1795750826.302702552] [rosbag2_recorder]: Event publisher thread: Exited
+[INFO] [turtlesim_node-1]: process has finished cleanly [pid 8950]
+[INFO] [pose_relay-3]: process has finished cleanly [pid 8952]
+[INFO] [pose_subscriber-4]: process has finished cleanly [pid 8953]
+[INFO] [patrol-2]: process has finished cleanly [pid 8951]
+[INFO] [record_sensor_pose-5]: process has finished cleanly [pid 8954]
+
+=== Граф после остановки живого запуска ===
+$ ros2 node list --no-daemon --spin-time 2
+
+=== Воспроизведение той же MCAP-записи с best_effort override ===
+$ ros2 bag play evidence/pr05/bag --qos-profile-overrides-path config/qos-overrides.yaml
+$ ros2 topic info /robot_a/sensor_pose --verbose --no-daemon --spin-time 2
+Type: turtlesim_msgs/msg/Pose
+
+Publisher count: 1
+
+Node name: rosbag2_player
+Node namespace: /
+Topic type: turtlesim_msgs/msg/Pose
+Topic type hash: RIHS01_37b07ace09a0ed2c5b774b1410dec972dfd1d292de5656ebc2b075ac646e09c8
+Endpoint type: PUBLISHER
+GID: 01.0f.eb.7d.dd.23.18.15.00.00.00.00.00.00.13.03
+QoS profile:
+  Reliability: BEST_EFFORT
+  History (Depth): KEEP_LAST (10)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 0
+
+$ timeout -k 2s -s INT 3s ros2 topic echo /robot_a/sensor_pose turtlesim_msgs/msg/Pose --qos-reliability reliable --once
+[WARN] [1795750832.521063763] [_ros2cli_9244]: New publisher discovered on topic '/robot_a/sensor_pose', offering incompatible QoS. No messages will be received from it. Last incompatible policy: RELIABILITY
+exit=124
+$ timeout -k 2s -s INT 3s ros2 topic echo /robot_a/sensor_pose turtlesim_msgs/msg/Pose --qos-reliability best_effort --once
+x: 7.072674751281738
+y: 7.8668928146362305
+theta: 1.9728000164031982
+linear_velocity: 0.5
+angular_velocity: 0.30000001192092896
+---
+exit=0
+stdin is not a terminal device. Keyboard handling disabled.[INFO] [1795750829.144620928] [rosbag2_player]: Set rate to 1
+
+[INFO] [1795750829.144685136] [rosbag2_player]: Overriding QoS profile for topic /robot_a/sensor_pose
+[INFO] [1795750829.146747053] [rosbag2_player]: Adding keyboard callbacks.
+[INFO] [1795750829.146758261] [rosbag2_player]: Press SPACE for Pause/Resume
+[INFO] [1795750829.146761886] [rosbag2_player]: Press CURSOR_RIGHT for Play Next Message
+[INFO] [1795750829.146764345] [rosbag2_player]: Press CURSOR_UP for Increase Rate 10%
+[INFO] [1795750829.146766178] [rosbag2_player]: Press CURSOR_DOWN for Decrease Rate 10%
+Progress bar enabled at 3 Hz.
+Progress bar [?]: [R]unning, [P]aused, [B]urst, [D]elayed, [S]topped
+
+[1795750810.783152580] Duration 0.00/15.51 [S]
+[INFO] [1795750829.147889678] [rosbag2_player]: Playback until timestamp: -1
+
+[WARN] [1795750832.508070305] [rosbag2_player]: New subscription discovered on topic '/robot_a/sensor_pose', requesting incompatible QoS. No messages will be sent to it. Last incompatible policy: RELIABILITY_QOS_POLICY
+
+=== Состав MCAP-записи ===
+$ ros2 bag info evidence/pr05/bag
+
+Files:             0_bag_2026_11_27-03_40_10.mcap
+Bag size:          71.3 KiB
+Storage id:        mcap
+ROS Distro:        lyrical
+Duration:          15.505574632s
+Start:             Nov 27 2026 03:40:10.783152586 (1795750810.783152586)
+End:               Nov 27 2026 03:40:26.288727218 (1795750826.288727218)
+Messages:          960
+Topic information: Topic: /robot_a/sensor_pose | Type: turtlesim_msgs/msg/Pose | Count: 960 | Serialization Format: cdr
+Services:          0
+Service information:
+Actions:           0
+Action information:
+$ cp evidence/pr05/bag/metadata.yaml evidence/pr05/bag-metadata.yaml

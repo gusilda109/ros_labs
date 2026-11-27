@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "practice_id": "PR06",
+  "commit": "48a06081dde9dd6b380d14e005d0d8e542e620f5",
+  "course_kit": {
+    "version": "v1-w12",
+    "archive_sha256": "525e86f818ffed166e7f7b67cc87fdd3f3ea840d13aa90e76bde9fda0f3c9c5a"
+  },
+  "commands": [
+    "cd /home/ubuntu/ros2_ws",
+    "source /opt/ros/lyrical/setup.bash",
+    "colcon build --symlink-install --packages-select course_description",
+    "source install/setup.bash",
+    "export ROS_DOMAIN_ID=66",
+    "ros2 launch course_description vehicle.launch.py --show-args",
+    "ros2 launch course_description vehicle.launch.py",
+    "ros2 launch course_description vehicle.launch.py rviz:=false",
+    "xacro src/course_description/urdf/vehicle.urdf.xacro > /tmp/vehicle.urdf",
+    "check_urdf /tmp/vehicle.urdf",
+    "python3 -m pytest -q src/course_description/test/test_vehicle.py::test_lidar_parent",
+    "colcon test --packages-select course_description",
+    "colcon test-result --test-result-base build/course_description --verbose",
+    "timeout -k 2s -s INT 5s ros2 run tf2_ros tf2_echo base_link lidar_link",
+    "cd \"$(mktemp -d)\" && ros2 run tf2_tools view_frames",
+    "ros2 topic info /tf_static --verbose --no-daemon --spin-time 2",
+    "timeout -k 2s -s INT 4s ros2 topic echo /tf_static --once --qos-durability transient_local --qos-reliability reliable",
+    "timeout -k 2s -s INT 4s ros2 topic echo /tf_static --once --qos-durability volatile --qos-reliability reliable",
+    "ros2 topic info /tf --verbose --no-daemon --spin-time 2",
+    "python3 .course-kit/v1/tools/check_practice.py PR06 --submission ."
+  ],
+  "tests": [
+    {
+      "name": "Xacro развёрнут, check_urdf принял дерево с корнем base_link",
+      "status": "passed"
+    },
+    {
+      "name": "Шесть сценариев pytest для фреймов, геометрии, параметров и инерции прошли под colcon",
+      "status": "passed"
+    },
+    {
+      "name": "RViz показал модель с фиксированным фреймом base_link, view_frames получил все десять связей при подаче joint_states",
+      "status": "passed"
+    },
+    {
+      "name": "У /tf_static один издатель RELIABLE + TRANSIENT_LOCAL, поздние подписчики завершились с кодами 0 и 124",
+      "status": "passed"
+    },
+    {
+      "name": "Отрицательный опыт: неверное смещение в tf2_echo при успешном check_urdf и отказе test_lidar_parent",
+      "status": "passed"
+    },
+    {
+      "name": "После исправления test_lidar_parent прошёл, view_frames показал base_link родителем lidar_link",
+      "status": "passed"
+    }
+  ],
+  "defect": {
+    "reproducer": "На ветке codex/pr06-reproduce-lidar (0c799e5626e5ddf812abee462842c992b957c92d) запустить vehicle.launch.py rviz:=false, затем tf2_echo base_link lidar_link и тест test_lidar_parent.",
+    "root_cause": "В lidar_joint изменён родитель с base_link на camera_link при том же локальном смещении. Камера смещена на (0.28, 0, 0.38) м без вращения. Суммарный перенос лидара стал (0.56, 0, 0.76) м.",
+    "proof_after": "После возврата base_link тест test_lidar_parent прошёл, а tf2_echo снова показал (0.28, 0, 0.38) м. check_urdf прошёл в обеих версиях."
+  },
+  "claims": {
+    "public_tests_passed": true,
+    "defect_reproduced": true,
+    "defect_fixed": true
+  },
+  "time": {
+    "contact_academic_hours": 0,
+    "self_study_hours": 0
+  },
+  "ai_used": true
+}

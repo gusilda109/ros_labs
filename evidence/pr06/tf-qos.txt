@@ -1,0 +1,164 @@
+PR06 — поздние подписчики на /tf_static
+Ubuntu в контейнере ros2, рабочий каталог /home/ubuntu/ros2_ws
+$ source /opt/ros/lyrical/setup.bash
+$ source install/setup.bash
+$ export ROS_DOMAIN_ID=66
+
+В терминале A: ros2 launch course_description vehicle.launch.py
+В терминале B после запуска:
+
+## topic info /tf_static
+$ ros2 topic info /tf_static --verbose --no-daemon --spin-time 2
+Type: tf2_msgs/msg/TFMessage
+
+Publisher count: 1
+
+Node name: robot_state_publisher
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Topic type hash: RIHS01_e369d0f05a23ae52508854b66f6aa0437f3449d652e8cbf22d5abe85d020f087
+Endpoint type: PUBLISHER
+GID: 01.0f.eb.7d.af.29.6e.60.00.00.00.00.00.00.16.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (1)
+  Durability: TRANSIENT_LOCAL
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 1
+
+Node name: transform_listener_impl_aaaaed567830
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Topic type hash: RIHS01_e369d0f05a23ae52508854b66f6aa0437f3449d652e8cbf22d5abe85d020f087
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.eb.7d.b0.29.14.e4.00.00.00.00.00.00.17.04
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (100)
+  Durability: TRANSIENT_LOCAL
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+## echo transient_local
+$ timeout -k 2s -s INT 4s ros2 topic echo /tf_static --once --qos-durability transient_local --qos-reliability reliable
+transforms:
+- header:
+    stamp:
+      sec: 1795752079
+      nanosec: 22132506
+    frame_id: base_link
+  child_frame_id: camera_link
+  transform:
+    translation:
+      x: 0.28
+      y: 0.0
+      z: 0.38
+    rotation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      w: 1.0
+- header:
+    stamp:
+      sec: 1795752079
+      nanosec: 22132506
+    frame_id: camera_link
+  child_frame_id: camera_optical_frame
+  transform:
+    translation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    rotation:
+      x: 0.5
+      y: -0.4999999999999999
+      z: 0.5
+      w: -0.5000000000000001
+- header:
+    stamp:
+      sec: 1795752079
+      nanosec: 22132506
+    frame_id: base_link
+  child_frame_id: imu_link
+  transform:
+    translation:
+      x: 0.28
+      y: 0.0
+      z: 0.38
+    rotation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      w: 1.0
+- header:
+    stamp:
+      sec: 1795752079
+      nanosec: 22132506
+    frame_id: base_link
+  child_frame_id: lidar_link
+  transform:
+    translation:
+      x: 0.28
+      y: 0.0
+      z: 0.38
+    rotation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      w: 1.0
+---
+exit=0
+## echo volatile
+$ timeout -k 2s -s INT 4s ros2 topic echo /tf_static --once --qos-durability volatile --qos-reliability reliable
+exit=124
+
+## topic info /tf (профиль издателя)
+$ ros2 topic info /tf --verbose --no-daemon --spin-time 2
+Type: tf2_msgs/msg/TFMessage
+
+Publisher count: 1
+
+Node name: robot_state_publisher
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Topic type hash: RIHS01_e369d0f05a23ae52508854b66f6aa0437f3449d652e8cbf22d5abe85d020f087
+Endpoint type: PUBLISHER
+GID: 01.0f.eb.7d.af.29.6e.60.00.00.00.00.00.00.15.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (100)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 1
+
+Node name: transform_listener_impl_aaaaed567830
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Topic type hash: RIHS01_e369d0f05a23ae52508854b66f6aa0437f3449d652e8cbf22d5abe85d020f087
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.eb.7d.b0.29.14.e4.00.00.00.00.00.00.16.04
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (100)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Издатель /tf_static использует RELIABLE + TRANSIENT_LOCAL, поэтому хранит последнее
+сообщение с фиксированными связями и отдаёт его позднему подписчику с тем же
+профилем (exit=0). Поздний подписчик VOLATILE ждёт следующее сообщение и получает
+тайм-аут (exit=124), поскольку сочленения фиксированы.
+На /tf издатель использует RELIABLE + VOLATILE: подвижные связи обновляются
+по мере поступления /joint_states, а поздний подписчик получает новые состояния.

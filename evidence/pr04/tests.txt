@@ -1,0 +1,40 @@
+Терминал Ubuntu A — сборка и тесты в контейнере ros2
+$ cd /home/ubuntu/ros2_ws
+$ source /opt/ros/lyrical/setup.bash
+$ colcon build --symlink-install --packages-select turtle_bringup patrol
+Starting >>> patrol
+Starting >>> turtle_bringup
+Finished <<< patrol [0.79s]
+Finished <<< turtle_bringup [0.79s]
+
+Summary: 2 packages finished [0.87s]
+$ source install/setup.bash
+$ colcon test --packages-select turtle_bringup patrol
+Starting >>> patrol
+Starting >>> turtle_bringup
+Finished <<< turtle_bringup [8.14s]
+Finished <<< patrol [8.20s]
+
+Summary: 2 packages finished [8.27s]
+$ colcon test-result --verbose
+Summary: 27 tests, 0 errors, 0 failures, 2 skipped
+$ python3 -m pytest src/patrol/test
+============================= test session starts ==============================
+platform linux -- Python 3.14.4, pytest-9.0.2, pluggy-1.6.0
+rootdir: /home/ubuntu/ros2_ws/src/patrol
+plugins: launch_testing_ros-0.29.9, launch_testing-3.9.8, ament_flake8-0.20.6, ament_xmllint-0.20.6, ament_copyright-0.20.6, ament_pep257-0.20.6, ament_mypy-0.20.6, ament_lint-0.20.6, typeguard-4.4.4, cov-5.0.0, colcon-core-0.21.1
+collected 22 items
+
+src/patrol/test/test_command.py ...                                      [ 13%]
+src/patrol/test/test_copyright.py s                                      [ 18%]
+src/patrol/test/test_flake8.py .                                         [ 22%]
+src/patrol/test/test_mypy.py .                                           [ 27%]
+src/patrol/test/test_parameters.py ..............                        [ 90%]
+src/patrol/test/test_pep257.py .                                         [ 95%]
+src/patrol/test/test_xmllint.py .                                        [100%]
+
+======================== 21 passed, 1 skipped in 3.97s =========================
+
+Терминал macOS — проверка в чистой копии репозитория с файлами сдачи
+$ python3 .course-kit/v1/tools/check_practice.py PR04 --submission .
+PR04: контракт evidence выполнен

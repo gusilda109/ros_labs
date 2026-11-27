@@ -9,7 +9,7 @@
 Запуск контейнера (на хосте): `docker start ros2`
 
 ## Course kit
-Ревизия v1-w11. Распаковывается в `.course-kit/v1/`, в git не хранится.
+Ревизия v1-w12. Распаковывается в `.course-kit/v1/`, в git не хранится.
 CI скачивает зафиксированную ревизию и проверяет SHA-256.
 
 ## PR01: граф turtlesim и разрыв доменов
@@ -80,3 +80,57 @@ CI (`ros-build`) в контейнере `ros:lyrical-ros-base` собирает
 
     python3 -m py_compile src/turtle_bringup/launch/sim.launch.py
     python3 .course-kit/v1/tools/check_practice.py PR02 --submission .
+
+## PR04. Параметры движения
+
+В терминале macOS запустите контейнер командой `docker start ros2`
+и откройте в браузере [рабочий стол Ubuntu](http://localhost:6080/).
+Во всех терминалах Ubuntu для этого опыта используется отдельный домен 46.
+
+**Терминал Ubuntu A — сборка и симулятор**
+
+```bash
+cd /home/ubuntu/ros2_ws
+source /opt/ros/lyrical/setup.bash
+colcon build --symlink-install --packages-select turtle_bringup patrol
+source install/setup.bash
+export ROS_DOMAIN_ID=46
+ros2 launch turtle_bringup sim.launch.py
+```
+
+**Терминал Ubuntu B — нода `patrol`**
+
+```bash
+cd /home/ubuntu/ros2_ws
+source /opt/ros/lyrical/setup.bash
+source install/setup.bash
+export ROS_DOMAIN_ID=46
+ros2 topic type /turtle1/pose
+ros2 run patrol patrol --ros-args -r cmd_vel:=/turtle1/cmd_vel
+```
+
+**Терминал Ubuntu C — параметры и проверка**
+
+```bash
+cd /home/ubuntu/ros2_ws
+source /opt/ros/lyrical/setup.bash
+source install/setup.bash
+export ROS_DOMAIN_ID=46
+ros2 param get /patrol publish_hz
+timeout -s INT 6s ros2 topic hz /turtle1/cmd_vel
+ros2 param set /patrol publish_hz 5.0
+timeout -s INT 6s ros2 topic hz /turtle1/cmd_vel
+ros2 param set /patrol publish_hz 0.0
+ros2 param get /patrol publish_hz
+timeout -s INT 6s ros2 topic hz /turtle1/cmd_vel
+ros2 service call /clear std_srvs/srv/Empty '{}'
+ros2 action list -t
+python3 -m pytest src/patrol/test
+python3 .course-kit/v1/tools/check_practice.py PR04 --submission .
+```
+
+Пределы параметров включительные. `linear_speed` принимает 0–1 м/с,
+`turn_rate` — от −1 до 1 рад/с, `publish_hz` — 1–30 Гц.
+После отклонения нуля параметр и поток остаются на 5 Гц. Команда `timeout`
+завершает каждый замер через 6 секунд. Результаты обоих запусков сохранены
+в [evidence/pr04/parameters.md](evidence/pr04/parameters.md).

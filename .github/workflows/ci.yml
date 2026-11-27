@@ -2,7 +2,7 @@ name: CI
 on: [push, pull_request]
 
 env:
-  PRACTICE: PR02
+  PRACTICE: PR03
   KIT_URL: https://ros.lms.ci.nsu.ru/downloads/robotics-course-kit-v1-w11-0b67bfd41448.tar.gz
   KIT_SHA256: 0b67bfd41448549d21122124b7f49211ba2cd068cc56751871f319eadeb9d0ab
 
@@ -58,6 +58,7 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends \
             ros-lyrical-turtlesim \
+            ros-lyrical-turtlesim-msgs \
             ros-lyrical-ament-copyright \
             ros-lyrical-ament-flake8 \
             ros-lyrical-ament-pep257 \
@@ -68,11 +69,11 @@ jobs:
       - name: Syntax check of launch file
         run: python3 -m py_compile src/turtle_bringup/launch/sim.launch.py
 
-      - name: Build turtle_bringup
+      - name: Build turtle_bringup and patrol
         run: |
           source /opt/ros/lyrical/setup.bash
           set -o pipefail
-          colcon build --symlink-install --packages-select turtle_bringup \
+          colcon build --symlink-install --packages-select turtle_bringup patrol \
             2>&1 | tee "$RUNNER_TEMP/build.txt"
 
       - name: Check installed sim.launch.py
@@ -96,3 +97,9 @@ jobs:
           source /opt/ros/lyrical/setup.bash
           colcon test --packages-select turtle_bringup
           colcon test-result --verbose
+
+      - name: Patrol tests
+        run: |
+          source /opt/ros/lyrical/setup.bash
+          source install/setup.bash
+          python3 -m pytest src/patrol/test

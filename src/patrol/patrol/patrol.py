@@ -2,14 +2,14 @@
 
 from collections.abc import Mapping
 from math import isfinite
-import signal
 
 from geometry_msgs.msg import Twist
 from rcl_interfaces.msg import SetParametersResult
-from rclpy import init, spin, try_shutdown
+from rclpy import init, spin
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.parameter import Parameter
+from rclpy.signals import SignalHandlerOptions
 from turtlesim_msgs.msg import Pose
 
 
@@ -62,7 +62,7 @@ class Patrol(Node):
         ])
         self._pose: Pose | None = None
         self._pose_subscription = self.create_subscription(
-            Pose, '/turtle1/pose', self._store_pose, 10)
+            Pose, 'turtle1/pose', self._store_pose, 10)
         self._command_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
         self._publish_hz = self.get_parameter('publish_hz').get_parameter_value().double_value
         self._timer = self.create_timer(1.0 / self._publish_hz, self._publish_command)
@@ -96,20 +96,15 @@ class Patrol(Node):
 
 def main() -> None:
     """Start the node and process callbacks until interrupted."""
-    # Let rclpy shut down the context on SIGINT, even if ros2 run forwards it twice.
-    previous_handler = signal.signal(signal.SIGINT, lambda *_: None)
-    try:
-        init()
+    # Let Ctrl+C interrupt the executor before shutting down its context.
+    with init(signal_handler_options=SignalHandlerOptions.NO):
         node = Patrol()
         try:
             spin(node)
-        except ExternalShutdownException:
+        except (ExternalShutdownException, KeyboardInterrupt):
             pass
         finally:
             node.destroy_node()
-            try_shutdown()
-    finally:
-        signal.signal(signal.SIGINT, previous_handler)
 
 
 if __name__ == '__main__':

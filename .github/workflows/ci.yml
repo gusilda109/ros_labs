@@ -2,7 +2,7 @@ name: CI
 on: [push, pull_request]
 
 env:
-  PRACTICE: PR04
+  PRACTICE: PR05
   KIT_URL: https://ros.lms.ci.nsu.ru/downloads/robotics-course-kit-v1-w12-525e86f818ff.tar.gz
   KIT_SHA256: 525e86f818ffed166e7f7b67cc87fdd3f3ea840d13aa90e76bde9fda0f3c9c5a
 
@@ -59,6 +59,8 @@ jobs:
           apt-get install -y --no-install-recommends \
             ros-lyrical-turtlesim \
             ros-lyrical-turtlesim-msgs \
+            ros-lyrical-ros2bag \
+            ros-lyrical-rosbag2-storage-mcap \
             ros-lyrical-ament-copyright \
             ros-lyrical-ament-flake8 \
             ros-lyrical-ament-pep257 \
@@ -67,13 +69,15 @@ jobs:
             python3-pytest
 
       - name: Syntax check of launch file
-        run: python3 -m py_compile src/turtle_bringup/launch/sim.launch.py
+        run: |
+          python3 -m py_compile src/turtle_bringup/launch/sim.launch.py \
+            src/course_bringup/launch/patrol.launch.py
 
-      - name: Build turtle_bringup and patrol
+      - name: Build packages
         run: |
           source /opt/ros/lyrical/setup.bash
           set -o pipefail
-          colcon build --symlink-install --packages-select turtle_bringup patrol \
+          colcon build --symlink-install \
             2>&1 | tee "$RUNNER_TEMP/build.txt"
 
       - name: Check installed sim.launch.py
@@ -91,11 +95,12 @@ jobs:
           test -f "$launch_file"
           # Разбирает launch-описание без запуска нод: GUI в CI не нужен
           ros2 launch turtle_bringup sim.launch.py --show-args
+          ros2 launch course_bringup patrol.launch.py --show-args
 
       - name: Package tests
         run: |
           source /opt/ros/lyrical/setup.bash
-          colcon test --packages-select turtle_bringup
+          colcon test --packages-select turtle_bringup course_bringup
           colcon test-result --verbose
 
       - name: Patrol tests

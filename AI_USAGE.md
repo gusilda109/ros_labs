@@ -17,3 +17,9 @@
 - Затронутые компоненты: `src/turtle_bringup/launch/sim.launch.py`, `src/turtle_bringup/setup.py`, `src/turtle_bringup/package.xml`, `.github/workflows/ci.yml`, `README.md`, черновики `evidence/pr02/commands.md`, `types.md`, `report.json`.
 - Характер помощи: разбор задания, черновики launch-файла, правок setup.py/package.xml и CI-задачи сборки пакета, шаблоны commands.md и types.md с пояснениями.
 - Как результат был проверен независимо: пакет создан генератором `ros2 pkg create` и собран мной в контейнере; запуск, остановка launch и опыт с `/cmd_vel` выполнены мной, все выводы в commands.md и types.md вставлены из моих терминалов; тексты прочитаны и исправлены мной; комплектность — `check_practice.py`, сборка и установка launch — CI.
+
+## PR03
+
+- Использован ИИ (`ai_used: true`). Модель GPT-6, инструмент Codex в настольном приложении.
+- Codex разобрал задание, создал пакет `patrol`, реализовал ноду и тесты, обновил GitHub Actions и оформил материалы сдачи.
+- Результаты сверены с фактическим выводом `colcon`, `pytest` и команд `ros2` в контейнере ROS 2 Lyrical. Комплектность проверяется `check_practice.py` на чистой копии репозитория.

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "practice_id": "PR03",
+  "commit": "67044cbc6ef40463264839c1575c46e7aef3b6ed",
+  "course_kit": {
+    "version": "v1-w11",
+    "archive_sha256": "0b67bfd41448549d21122124b7f49211ba2cd068cc56751871f319eadeb9d0ab"
+  },
+  "commands": [
+    "source /opt/ros/lyrical/setup.bash",
+    "ros2 pkg create --build-type ament_python --node-name patrol patrol --license Apache-2.0 --dependencies rclpy geometry_msgs",
+    "colcon build --symlink-install --packages-select patrol",
+    "source install/setup.bash",
+    "python3 -m pytest src/patrol/test",
+    "export ROS_DOMAIN_ID=36",
+    "ros2 launch turtle_bringup sim.launch.py",
+    "ros2 topic type /turtle1/pose",
+    "ros2 run patrol patrol",
+    "ros2 node info /patrol",
+    "ros2 topic info /cmd_vel --verbose",
+    "ros2 topic info /turtle1/cmd_vel --verbose",
+    "ros2 topic echo /cmd_vel --once",
+    "ros2 run patrol patrol --ros-args -r cmd_vel:=/turtle1/cmd_vel",
+    "ros2 topic echo /turtle1/cmd_vel --once",
+    "ros2 topic echo /turtle1/pose --once",
+    "timeout -s INT 10s ros2 topic hz /turtle1/cmd_vel",
+    "python3 .course-kit/v1/tools/check_practice.py PR03 --submission ."
+  ],
+  "tests": [
+    {"name": "Сборка patrol в ROS 2 Lyrical", "status": "passed"},
+    {"name": "pytest: 6 пройдено, 1 пропущен; оба теста выбора команды прошли", "status": "passed"},
+    {"name": "Граф до и после remap, получение позы и движение turtlesim", "status": "passed"},
+    {"name": "Измерение потока за 10 с: 9.999 Гц в последнем окне", "status": "passed"},
+    {"name": "После SIGINT скорости turtlesim обнулились, три замера позы совпали", "status": "passed"}
+  ],
+  "defect": {
+    "reproducer": "Запустить turtlesim и ros2 run patrol patrol в одном домене. В /cmd_vel один издатель и ноль подписчиков. В /turtle1/cmd_vel ноль издателей и один подписчик. Поза черепашки постоянна.",
+    "root_cause": "Относительное имя cmd_vel в корневом пространстве имён разрешается в /cmd_vel. Подписка turtlesim находится в /turtle1/cmd_vel, поэтому издатель и подписчик не соединяются.",
+    "proof_after": "Запуск с -r cmd_vel:=/turtle1/cmd_vel связал /patrol с /turtlesim. В топике видна команда linear.x=0.5, angular.z=0.3. Поза меняется, частота в конце 10-секундного замера 9.999 Гц. После SIGINT и ожидания поза постоянна, скорости нулевые."
+  },
+  "claims": {
+    "public_tests_passed": true,
+    "defect_reproduced": true,
+    "defect_fixed": true
+  },
+  "time": {
+    "contact_academic_hours": 0,
+    "self_study_hours": 0.4
+  },
+  "ai_used": true
+}
